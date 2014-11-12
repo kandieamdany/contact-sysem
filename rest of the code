@@ -1,0 +1,507 @@
+add_contact.php
+
+<!DOCTYPE HTML>
+<html><head><title>Contact System</title>
+
+<!--FORM VALIDATION -->
+<?php 
+
+
+$fname="";
+$mname="";
+$lname="";
+$phone="";
+$email="";
+$errorMessage="";
+$mphone="";
+
+
+
+function quote_smart($value, $handle) {
+
+   if (get_magic_quotes_gpc()) {
+       $value = stripslashes($value);
+   }
+
+   if (!is_numeric($value)) {
+       $value = "'" . mysql_real_escape_string($value, $handle) . "'";
+   }
+   return $value;
+}
+
+
+
+include "db_connect.php";
+if ($_SERVER['REQUEST_METHOD'] == 'POST'){
+
+
+	
+//trimming white spaces
+$fname=trim($_POST['fname']);
+$mname=trim($_POST['mname']);
+$lname=trim($_POST['lname']);
+$phone=trim($_POST['phone']);
+$email=trim($_POST['mail']);
+
+//checking blank text boxes
+if(empty($fname) || empty($mname) || empty($lname) || empty ($phone) || empty($email))
+{$errorMessage='<font color="03F33F">eFill all fields</font>';}
+else{
+//validating email
+if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
+$errorMessage='<font color="03F33F">email invalid</font>';
+
+}
+else{
+$errorMessage="";
+}
+//validating phone number
+
+if(!is_numeric($phone)){
+$errorMessage='<font color="#FF0000">Digits only.</font>';
+
+}else{
+$plength=strlen($phone);
+if($plength!=10){
+$mphone='<font color="#FF0000">10 digits only.</font>';
+
+}else{
+$mphone="";
+}
+}
+
+//QUERYING THE DATABASE
+if($mphone==""){
+
+include "db_connect.php";
+if($db_found){
+//removing any special characters to prevent possible SQL injections
+$fname=quote_smart($fname,$db_handle);
+$mname=quote_smart($mname,$db_handle);
+$lname=quote_smart($lname,$db_handle);
+$phone=quote_smart($phone,$db_handle);
+$email=quote_smart($email,$db_handle);
+
+//validating user is not already in the system
+$SQL="SELECT * FROM user_info WHERE phone=$phone OR email=$email";
+$result=mysql_query($SQL);
+$num_rows=mysql_num_rows($result);
+if($num_rows>0){
+$errorMessage='<font color="#FF0000">Sorry email and phone number already in use</font>';
+}else{
+$SQL="INSERT INTO user_info VALUES(NULL,$fname,$mname,$lname,$phone,$email)";
+$result=mysql_query($SQL);
+$errorMessage='<font color="#060360">Successfuly Registered</font>';
+mysql_close($db_handle);
+}
+
+}else{
+$errorMessage="Connection error";
+}
+
+}//db_found
+}
+//end of validation
+}//server
+
+
+
+ ?>
+
+</head>
+<body>
+
+<?php include "header.txt"  ?>
+<hr><br /><br /><hr>
+<center>
+	
+<form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
+<p><font color="#0C03C0">FILL THE FORM BELOW TO REGISTER</font></p><br /><br />
+<table bgcolor="#6FC9FC">
+<tr><td><font color="#FF0000">*</font>FIRST NAME:</td><td><input type ="text" name="fname"  ></td></tr>
+<tr><td><font color="#FF0000">*</font>MIDDLE NAME:</td><td><input type ="text" name="mname"  ></td></tr>
+<tr><td><font color="#FF0000">*</font>LAST NAME:</td><td><input type ="text" name="lname" ></td></tr>
+<tr><td><font color="#FF0000">*</font>PHONE:</td><td><input type ="text" name="phone" ><?php print $mphone; ?></td></tr>
+<tr><td><font color="#FF0000">*</font>EMAIL:</td><td><input type ="email" name="mail" ></td></tr>
+<tr><td></td><td><input type="submit" name="btnreg" value="Register"></td></tr>
+
+</table>
+<?php print $errorMessage; ?>
+</form>
+
+</center><br /><br />
+<center><a href="index.php">Home page</a></cente
+</body>
+
+</html>
+
+
+header.txt
+
+<h1 align="center" ><font color="#008000"">Karen Roses Contact System</font></h1>
+
+login.php
+
+<?php //starting session
+session_start();
+ ?>
+<!DOCTYPE html>
+<html><head><title>login details</title>
+<?php 
+$semail="";
+$sphone="";
+$errorMessage="";
+
+//==========================================
+//	ESCAPE DANGEROUS SQL CHARACTERS
+//==========================================
+function quote_smart($value, $handle) {
+
+   if (get_magic_quotes_gpc()) {
+       $value = stripslashes($value);
+   }
+
+   if (!is_numeric($value)) {
+       $value = "'" . mysql_real_escape_string($value, $handle) . "'";
+   }
+   return $value;
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST'){
+    $semail = $_POST['semail'];
+	$sphone = $_POST['sphone'];
+
+	$semail = htmlspecialchars($semail);
+	$sphone = htmlspecialchars($sphone);
+    
+    include "db_connect.php";
+    if ($db_found) {
+
+		$semail = quote_smart($semail, $db_handle);
+		$sphone = quote_smart($sphone, $db_handle);
+
+		$SQL = "SELECT * FROM user_info WHERE phone = $sphone AND email = $semail";
+		$result = mysql_query($SQL);
+		$num_rows = mysql_num_rows($result);
+		
+		if ($result) {
+			if ($num_rows > 0) {
+				session_start();
+				$_SESSION['login'] = "1";
+				//storing user credentials
+				$_SESSION['uemail'] = $semail;
+				$_SESSION['uphone'] = $sphone;
+				header ("Location: update_contact.php");
+			}
+			else {
+				session_start();
+				$_SESSION['login'] = "";
+				header ("Location: add_contact.php");
+			}	
+		}
+		else {
+			$errorMessage = "Error logging on";
+		}
+
+	mysql_close($db_handle);
+
+	}
+	else {
+		$errorMessage = "Error logging on";
+	}
+
+}
+	
+
+ ?>
+
+
+</head>
+<body>
+<?php include "header.txt"; ?>
+<hr><br /><hr><br />
+<center>
+<form action=""<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>"" method="post">
+         <table>
+	<tr><td>phone:</td><td><input type="text" name="sphone" value="<?php print $semail ; ?>"></td></tr>
+	<tr><td>email:</td><td><input type="email" name="semail" value="<?php print $sphone ; ?>"></td></tr>
+	<tr><td></td><td><input type="submit" value="Login"></td></tr>
+        </table>
+        <?php print $errorMessage;  ?>
+</form>
+</center>
+
+</body>
+</html>
+
+
+update_contact.php
+<?PHP
+session_start();
+if (!(isset($_SESSION['login']) && $_SESSION['login'] != '')) {
+	header ("Location: login.php");
+}
+
+?>
+
+<!DOCTYPE html>
+<html>
+<head><title>
+update contact details
+</title>
+<?php 
+$fname="";
+$mname="";
+$lname="";
+$phone="";
+$email="";
+$id="";
+$sesphone=$_SESSION['uphone'];
+$sesemail=$_SESSION['uemail'];
+include "db_connect.php";
+if($db_found){
+	$SQL="SELECT * FROM user_info WHERE phone=$sesphone AND email=$sesemail ";
+	$result=mysql_query($SQL);
+	while($us_info=mysql_fetch_assoc($result)){
+		$id=$us_info["id"];
+		$fname=$us_info["fname"];
+		$mname=$us_info["mname"];
+		$lname=$us_info["lname"];
+		$phone=$us_info["phone"];
+		$email=$us_info["email"];
+		}
+	mysql_close($db_handle);
+	}else{
+		$errorMessage='Error in databse connection';
+		mysql_close($db_handle);
+		}
+
+ ?>
+
+<!-- update information -->
+<?php 
+
+
+
+include "db_connect.php";
+if(isset($_POST["btnupdate"])){
+	
+	
+	$updateid=trim($_POST["uid"]);
+	$updatefname=trim($_POST["fname"]);
+	$updatemname=trim($_POST["mname"]);
+	$updatelname=trim($_POST["lname"]);
+	$updatephone=trim($_POST["phone"]);
+	$updatemail=trim($_POST["mail"]);
+	
+	//checking blank text boxes
+if(empty($updatefname) || empty($updatemname) || empty($updatelname) || empty ($updatephone) || empty($updatemail)){
+	$message='<font color="03F33F">Fill all fields</font>';
+	}else{
+	
+//validating phone number
+if(!is_numeric($updatephone)){
+$mphone='<font color="#FF0000">Digits only.</font>';
+
+}else{
+$plength=strlen($updatephone);
+if($plength!=10){
+$mephone='<font color="#FF0000">10 digits only.</font>';
+
+}else{
+$mephone="";
+}
+}
+if($mephone==""){	
+	
+	//querring database
+	if($db_found){
+		
+		$SQL="UPDATE user_info SET fname='$updatefname',mname='$updatemname',lname='$updatelname',phone='$updatephone',email='$updatemail' WHERE id=".$updateid; 
+		$result=mysql_query($SQL);
+		
+		mysql_close($db_handle);
+		header ("Location: success.php");
+		}else{
+			print "No database connection";
+			mysql_close($db_handle);
+			}//end of querring database
+			
+	}		
+	}//major else
+	}//server
+ ?>
+
+
+</head>
+<body>
+<?php include "header.txt"  ?>
+<hr><br /><br /><hr>
+<center>
+	
+<form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
+<p><font color="#0C03C0">Kindly Update Your Details If Necessary</font></p><br /><br />
+<table bgcolor="#C69F69">
+<tr><td>user ID:</td><td><input type ="text" name="uid" value="<?php print $id; ?>"  readonly="readonly" ></td></tr>	
+<tr><td><font color="#FF0000">*</font>FIRST NAME:</td><td><input type ="text" name="fname" value="<?php print $fname; ?>"  ></td></tr>
+<tr><td><font color="#FF0000">*</font>MIDDLE NAME:</td><td><input type ="text" name="mname" value="<?php print $mname; ?>" ></td></tr>
+<tr><td><font color="#FF0000">*</font>LAST NAME:</td><td><input type ="text" name="lname" value="<?php print $lname; ?>" ></td></tr>
+<tr><td><font color="#FF0000">*</font>PHONE:</td><td><input type ="text" name="phone" value="<?php print $phone; ?>" ><?php print $mephone;?></td></tr>
+<tr><td><font color="#FF0000">*</font>EMAIL:</td><td><input type ="email" name="mail" value="<?php print $email; ?>"></td></tr>
+<tr><td></td><td><input type="submit" name="btnupdate" value="Update"></td></tr>
+<tr><td><?php print $message; ?></td></tr>
+</table>
+
+</form>
+
+
+
+</center><br /><br />
+
+<center><a href="index.php">Logout</a></center><br /><br />
+
+</body>
+</html>
+
+
+
+view_all.php
+<!DOCTYPE html>
+<html>
+<head><title>All Contacts</title>
+<!--script to populate the table -->
+<?php 
+include "db_connect.php";
+if($db_found){
+	$SQL="SELECT * FROM user_info";
+	$result=mysql_query($SQL);
+	
+		
+	
+	
+	}else{
+		print "Database connection error";
+		mysql_close($db_handle);
+		}
+
+
+ ?>
+
+
+</head>
+<body>
+<?php  include "header.txt"; ?><hr><br><hr>
+
+<center>
+<table bgcolor="#6CF9CF" border="1" cellpadding="5" cellspacing="5">
+	<tr><td colspan="5"></td><b>All Contact Details</b></tr>
+	
+	<tr>
+<th align="center"><strong><font color="#FF0000">First Name</font></strong></th>
+<th align="center"><strong><font color="#FF0000">Middle Name</font></strong></th>
+<th align="center"><strong><font color="#FF0000">Last Name</font></strong></th>
+<th align="center"><strong><font color="#FF0000">Phone</font></strong></th>
+<th align="center"><strong><font color="#FF0000">Email</font></strong></th>
+</tr>
+<!-- populating the table-->
+<?php
+while($us_info=mysql_fetch_assoc($result)){
+?>		
+<tr>
+<td align="center"><?php print $us_info["fname"]; ?></td>
+<td align="center"><?php print $us_info["mname"]; ?></td>
+<td align="center"><?php print $us_info["lname"]; ?></td>
+<td align="center"><?php print $us_info["phone"]; ?></td>
+<td align="center"><?php print $us_info["email"]; ?></td>
+</tr>
+<?php } ?>
+</table>
+<?php
+mysql_close();
+?>
+</center>
+<center><a href="index.php">Home page</a></cente
+</body>
+</html>
+
+
+
+delete_contact.php
+
+<!DOCTYPE html>
+<html><head><title>Delete contact</title>
+<!--searching script -->
+<?php 
+if(isset($_POST["btnSearch"])){
+	include "db_connect.php";
+	if($db_found){
+		$search=$_POST["search"];
+		$SQL="SELECT * FROM user_info WHERE phone=$search";
+		$result=mysql_query($SQL);
+		while($se_result=mysql_fetch_assoc($result)){
+			$id=$se_result["id"];
+			$fname=$se_result["fname"];
+			$mname=$se_result["mname"];
+			$lname=$se_result["lname"];
+			$phone=$se_result["phone"];
+			$email=$se_result["email"];
+			
+			}
+			mysql_close($db_handle);
+		}else{
+			print "error connecting";
+			mysql_close($db_handle);
+			}
+	
+	}
+ ?>
+ 
+ <!--Deleting Script -->
+ <?php 
+ if(isset($_POST["btndelete"])){
+	 include "db_connect.php";
+	 if($db_found){
+		 $userid=$_POST["rid"];
+		 
+		 $SQL="DELETE FROM user_info WHERE id=".$userid;
+		 $result=mysql_query($SQL);
+		 $message='<font color="#F30F33">Succefully deleted!</font>';
+		 mysql_close($db_handle);
+		 }else{
+			 mysql_close($db_handle);
+			 print "Connection error";
+			 }
+	 
+	 }
+  ?>
+ 
+</head>
+<body>
+<?php include "header.txt"; ?><hr><br><hr>
+<!--search form -->
+<center><form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
+<input type="text" name="search"><input type="submit" name="btnSearch" value="Search">
+</form></center>
+<hr>
+<center>
+<!--Delete form -->
+<form action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method="POST">
+<table bgcolor="#9FCCFC">
+<tr><td></td><td><input type="hidden" name="rid" value="<?php print $id; ?>"></td></tr>  	
+<tr><td>FIRST NAME:</td><td><input type ="text" name="fname" readonly="readonly" value="<?php print $fname; ?>"  ></td></tr>
+<tr><td>MIDDLE NAME:</td><td><input type ="text" name="mname" readonly="readonly" value="<?php print $mname; ?>" ></td></tr>
+<tr><td>LAST NAME:</td><td><input type ="text" name="lname" readonly="readonly" value="<?php print $lname; ?>" ></td></tr>
+<tr><td>PHONE:</td><td><input type ="text" name="phone" readonly="readonly" value="<?php print $phone; ?>" ></td></tr>
+<tr><td>EMAIL:</td><td><input type ="email" name="mail" readonly="readonly" value="<?php print $email; ?>"></td></tr>
+<tr><td></td><td><input type="submit" name="btndelete" value="Delete"></td></tr>
+<tr><td><?php print $message; ?></td></tr>
+</table>
+
+</form>
+
+</center>
+<center><a href="index.php">Home page</a></center>
+</body>
+
+
+</html>
